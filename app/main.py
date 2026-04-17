@@ -87,7 +87,6 @@ async def main() -> None:
     def poll_and_trigger():
         poller.poll_latest()
         # Push a trigger candle to the CED queue so the pipeline evaluates
-        from datetime import datetime, timezone
         trigger = {"instrument": "EUR_USD", "t": datetime.now(tz=timezone.utc)}
         asyncio.run_coroutine_threadsafe(stream_candle_q.put(trigger), loop)
 

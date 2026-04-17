@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from app.detector.swings import SwingPoint, detect_swings
+from app.detector.swings import detect_swings
 from config.settings import SWING_LOOKBACK
 
 MSSDirection = Literal["bullish", "bearish"]  # direction of the NEW trend post-break

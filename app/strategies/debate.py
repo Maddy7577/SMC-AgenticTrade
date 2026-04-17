@@ -15,8 +15,6 @@ Probability formula (plan §Ambiguities #1):
 
 from __future__ import annotations
 
-import math
-
 from app.strategies.base import AgentOpinion, StrategyResult, TradeParameters, Verdict
 from config.settings import (
     CONFIDENCE_VALID_THRESHOLD,

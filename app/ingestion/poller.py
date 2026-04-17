@@ -8,13 +8,12 @@ On reconnect: called again to fill the gap caused by the disconnect.
 from __future__ import annotations
 
 import logging
-import sqlite3
 from datetime import datetime, timedelta, timezone
 
 from app.ingestion.oanda_client import OandaClient
 from app.storage import db as _db
 from app.storage.repositories import get_latest_candle_time, upsert_candle
-from config.instruments import INSTRUMENTS, PRIMARY, SMT_PAIR
+from config.instruments import PRIMARY, SMT_PAIR
 from config.settings import BACKFILL_DAYS_DAILY, BACKFILL_DAYS_INTRADAY, TIMEFRAMES
 
 log = logging.getLogger(__name__)
@@ -46,7 +45,6 @@ class CandlePoller:
 
     def poll_latest(self, db_path=_db.DB_PATH) -> None:
         """Fetch the most recent closed candle for all TFs and persist."""
-        now = datetime.now(tz=timezone.utc)
         for symbol in [PRIMARY, SMT_PAIR]:
             for tf in TIMEFRAMES:
                 try:

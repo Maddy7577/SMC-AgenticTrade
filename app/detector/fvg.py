@@ -11,7 +11,7 @@ State machine (FR-C-03):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 from config.instruments import pips_to_price

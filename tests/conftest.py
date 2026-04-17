@@ -6,8 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from config.instruments import InstrumentMeta, INSTRUMENTS
-
+from config.instruments import INSTRUMENTS, InstrumentMeta
 
 # ---------------------------------------------------------------------------
 # Candle builder helpers

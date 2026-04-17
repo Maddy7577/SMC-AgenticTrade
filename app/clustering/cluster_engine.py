@@ -15,7 +15,7 @@ from typing import NamedTuple
 from app.clustering.ancestry import can_cluster_together, select_representative
 from app.clustering.signature import build_cluster_key, parse_strategy_signature
 from app.storage import db as _db
-from app.storage.repositories import get_signal, insert_cluster, update_signal_gate
+from app.storage.repositories import get_signal, insert_cluster
 from config.settings import CONFLUENCE_BOOST, CONFLUENCE_BOOST_CAP
 
 log = logging.getLogger(__name__)

@@ -9,9 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-import time
+from collections.abc import AsyncIterator
 from datetime import datetime, timedelta, timezone
-from typing import AsyncIterator
 
 import oandapyV20
 import oandapyV20.endpoints.instruments as v20instruments
@@ -22,7 +21,6 @@ from config.settings import (
     OANDA_API_TOKEN,
     OANDA_ENVIRONMENT,
     RECONNECT_BACKOFF_SEQUENCE,
-    TIMEFRAMES,
 )
 
 log = logging.getLogger(__name__)

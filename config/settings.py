@@ -124,6 +124,6 @@ LOG_BACKUP_COUNT: int = 5
 # Flask
 # ---------------------------------------------------------------------------
 FLASK_HOST: str = "127.0.0.1"
-FLASK_PORT: int = int(os.environ.get("FLASK_PORT", "5000"))
+FLASK_PORT: int = int(os.environ.get("FLASK_PORT", "8010"))
 FLASK_DEBUG: bool = False
 SSE_RETRY_MS: int = 15_000   # 15-second SSE reconnect hint to browser

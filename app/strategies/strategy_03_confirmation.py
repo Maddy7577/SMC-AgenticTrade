@@ -25,11 +25,13 @@ from app.strategies.base import (
     TradeParameters,
 )
 from app.strategies.debate import compute_verdict
-from app.strategies.scoring import displacement_strength, rr_score, structure_clarity, wick_quality
-from config.instruments import pips_to_price, price_to_pips
-from config.settings import RR_FLOOR
+from app.strategies.scoring import displacement_strength, structure_clarity
 
 log = logging.getLogger(__name__)
+
+def _rnd(p: float) -> float:
+    return round(round(p / 0.0005) * 0.0005, 5)
+
 
 STRATEGY_ID = "03_confirmation"
 
@@ -265,9 +267,8 @@ class ConfirmationModelStrategy(BaseStrategy):
         if not sweeps or not mss or not fvgs:
             return None
         # Round to 5-pip buckets
-        rnd = lambda p: round(round(p / 0.0005) * 0.0005, 5)
         direction = mss[-1].direction
-        return f"{STRATEGY_ID}:{direction}:{rnd(sweeps[-1].swept_level)}:{rnd(mss[-1].broken_level)}:{rnd(fvgs[-1].midpoint)}"
+        return f"{STRATEGY_ID}:{direction}:{_rnd(sweeps[-1].swept_level)}:{_rnd(mss[-1].broken_level)}:{_rnd(fvgs[-1].midpoint)}"
 
     def evaluate(self, ctx: CanonicalContext) -> StrategyResult:
         opinions = [a.evaluate(ctx) for a in self._agents]

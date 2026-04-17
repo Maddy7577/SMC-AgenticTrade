@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 def build_health_snapshot(
-    stream: "StreamConsumer",
-    finnhub: "FinnhubClient",
+    stream: StreamConsumer,
+    finnhub: FinnhubClient,
     db_path=_db.DB_PATH,
 ) -> dict:
     now = datetime.now(tz=timezone.utc)

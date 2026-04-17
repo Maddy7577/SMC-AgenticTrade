@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import textwrap
-from datetime import datetime, timezone
+from datetime import datetime
 
 import google.generativeai as genai
 

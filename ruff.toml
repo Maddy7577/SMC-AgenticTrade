@@ -1,0 +1,19 @@
+target-version = "py310"
+line-length = 100
+exclude = ["venv", ".git", "__pycache__", "data", "logs", "scripts"]
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "B008",   # function call in default argument (common in FastAPI/Flask patterns)
+    "UP007",  # use X | Y instead of Optional — keep 3.10 compat explicit
+    "E741",   # ambiguous variable name — 'l' is standard OHLC low notation in this codebase
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402", "F401", "F811"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

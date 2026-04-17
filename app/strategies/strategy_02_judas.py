@@ -24,6 +24,10 @@ from config.instruments import pips_to_price
 
 log = logging.getLogger(__name__)
 
+def _rnd(p: float) -> float:
+    return round(round(p / 0.0005) * 0.0005, 5)
+
+
 STRATEGY_ID = "02_judas"
 
 
@@ -65,7 +69,7 @@ class _Opp1Agent(BaseAgent):
         # London KZ active
         london_ok = _in_london_kz(ctx)
         checks.append(london_ok)
-        reasons.append(f"✓ London KZ active" if london_ok else f"✗ not in London KZ ({ctx.kill_zone})")
+        reasons.append("✓ London KZ active" if london_ok else f"✗ not in London KZ ({ctx.kill_zone})")
 
         # False breakout detected
         fb_dir = _false_breakout_direction(ctx)
@@ -217,8 +221,7 @@ class JudasSwingStrategy(BaseStrategy):
         fvgs = [f for f in ctx.fvgs if f.state in ("formed", "retested")]
         if not mss or not fvgs:
             return None
-        rnd = lambda p: round(round(p / 0.0005) * 0.0005, 5)
-        return f"{STRATEGY_ID}:{fb_dir}:{rnd(ctx.asian_high)}:{rnd(mss[-1].broken_level)}:{rnd(fvgs[-1].midpoint)}"
+        return f"{STRATEGY_ID}:{fb_dir}:{_rnd(ctx.asian_high)}:{_rnd(mss[-1].broken_level)}:{_rnd(fvgs[-1].midpoint)}"
 
     def evaluate(self, ctx: CanonicalContext) -> StrategyResult:
         opinions = [a.evaluate(ctx) for a in self._agents]

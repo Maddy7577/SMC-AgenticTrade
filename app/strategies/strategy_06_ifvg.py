@@ -25,6 +25,10 @@ from config.instruments import pips_to_price
 
 log = logging.getLogger(__name__)
 
+def _rnd(p: float) -> float:
+    return round(round(p / 0.0005) * 0.0005, 5)
+
+
 STRATEGY_ID = "06_ifvg"
 
 _NY_WINDOWS = {"ny_kz", "silver_bullet_ny_am", "silver_bullet_ny_pm"}
@@ -183,7 +187,6 @@ class IFVGStrategy(BaseStrategy):
         entry = ifvg.midpoint
 
         sl_from_ifvg = pips_to_price(10)
-        sl_from_sweep = abs(sweep.wick_extreme - entry)
 
         if m.direction == "bullish":
             sl = round(min(ifvg.bottom - sl_from_ifvg, sweep.wick_extreme), 5)
@@ -207,8 +210,7 @@ class IFVGStrategy(BaseStrategy):
         mss = [m for m in ctx.mss_events if m.index >= len(ctx.m1_candles) - 20]
         if not mss:
             return None
-        rnd = lambda p: round(round(p / 0.0005) * 0.0005, 5)
-        return f"{STRATEGY_ID}:{mss[-1].direction}:{rnd(ctx.sweeps[-1].swept_level)}:{rnd(mss[-1].broken_level)}:{rnd(ifvg.midpoint)}"
+        return f"{STRATEGY_ID}:{mss[-1].direction}:{_rnd(ctx.sweeps[-1].swept_level)}:{_rnd(mss[-1].broken_level)}:{_rnd(ifvg.midpoint)}"
 
     def evaluate(self, ctx: CanonicalContext) -> StrategyResult:
         opinions = [a.evaluate(ctx) for a in self._agents]

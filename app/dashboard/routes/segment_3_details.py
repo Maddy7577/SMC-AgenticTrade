@@ -4,15 +4,13 @@ from __future__ import annotations
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
+from app.performance.tracker import mark_outcome
 from app.storage import db as _db
 from app.storage.repositories import (
     get_agent_scores,
     get_cluster,
     get_signal,
-    get_trade,
-    update_trade_outcome,
 )
-from app.performance.tracker import mark_outcome
 
 seg3_bp = Blueprint("seg3", __name__)
 

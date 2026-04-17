@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.detector.context import CanonicalContext
 from app.storage import db as _db

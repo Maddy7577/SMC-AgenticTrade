@@ -9,10 +9,8 @@ SL: Conservative (beyond sweep extreme) by default.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 from app.detector.context import CanonicalContext
-from app.detector.kill_zone import is_in_kill_zone
 from app.strategies.base import (
     AgentOpinion,
     BaseAgent,
@@ -22,10 +20,13 @@ from app.strategies.base import (
 )
 from app.strategies.debate import compute_verdict
 from app.strategies.scoring import displacement_strength, structure_clarity
-from config.instruments import pips_to_price, price_to_pips
-from config.settings import TZ_IST
+from config.instruments import price_to_pips
 
 log = logging.getLogger(__name__)
+
+def _rnd(p: float) -> float:
+    return round(round(p / 0.0005) * 0.0005, 5)
+
 
 STRATEGY_ID = "04_silver_bullet"
 MIN_TARGET_PIPS = 15.0
@@ -219,8 +220,7 @@ class SilverBulletStrategy(BaseStrategy):
         fvgs = [f for f in ctx.fvgs if f.state in ("formed", "retested")]
         if not sweeps or not mss or not fvgs:
             return None
-        rnd = lambda p: round(round(p / 0.0005) * 0.0005, 5)
-        return f"{STRATEGY_ID}:{mss[-1].direction}:{rnd(sweeps[-1].swept_level)}:{rnd(mss[-1].broken_level)}:{rnd(fvgs[-1].midpoint)}"
+        return f"{STRATEGY_ID}:{mss[-1].direction}:{_rnd(sweeps[-1].swept_level)}:{_rnd(mss[-1].broken_level)}:{_rnd(fvgs[-1].midpoint)}"
 
     def evaluate(self, ctx: CanonicalContext) -> StrategyResult:
         opinions = [a.evaluate(ctx) for a in self._agents]

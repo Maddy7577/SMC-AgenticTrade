@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from flask import Blueprint, render_template
 
 from app.storage import db as _db

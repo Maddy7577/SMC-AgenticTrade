@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from config.instruments import pips_to_price, price_to_pips
-
 
 def displacement_strength(candle: dict, atr_value: float | None) -> float:
     """Score 0–1: how strong is this displacement candle relative to ATR."""

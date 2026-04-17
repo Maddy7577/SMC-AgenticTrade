@@ -29,6 +29,10 @@ from config.instruments import pips_to_price
 
 log = logging.getLogger(__name__)
 
+def _rnd(p: float) -> float:
+    return round(round(p / 0.0005) * 0.0005, 5)
+
+
 STRATEGY_ID = "01_unicorn"
 MIN_OVERLAP_PCT = 0.10
 
@@ -138,7 +142,7 @@ class _Risk1Agent(BaseAgent):
             ]
             if close_swings:
                 score += 25
-                reasons.append(f"opposing liquidity within ATR")
+                reasons.append("opposing liquidity within ATR")
 
         if ctx.htf_bias == "neutral":
             score += 15
@@ -231,8 +235,7 @@ class UnicornModelStrategy(BaseStrategy):
         sweeps = ctx.sweeps
         if not mss or not sweeps:
             return None
-        rnd = lambda p: round(round(p / 0.0005) * 0.0005, 5)
-        return f"{STRATEGY_ID}:{mss[-1].direction}:{rnd(sweeps[-1].swept_level)}:{rnd(mss[-1].broken_level)}:{rnd(fvg.midpoint)}"
+        return f"{STRATEGY_ID}:{mss[-1].direction}:{_rnd(sweeps[-1].swept_level)}:{_rnd(mss[-1].broken_level)}:{_rnd(fvg.midpoint)}"
 
     def evaluate(self, ctx: CanonicalContext) -> StrategyResult:
         opinions = [a.evaluate(ctx) for a in self._agents]

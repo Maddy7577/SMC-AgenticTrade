@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from flask import Flask
 
-from config.settings import FLASK_DEBUG, FLASK_HOST, FLASK_PORT, TZ_IST
+from config.settings import FLASK_DEBUG, TZ_IST
 
 
 def create_app() -> Flask:
@@ -41,10 +41,10 @@ def create_app() -> Flask:
             value = value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+    from app.dashboard.routes.health import health_bp
     from app.dashboard.routes.segment_1_performance import seg1_bp
     from app.dashboard.routes.segment_2_strategies import seg2_bp
     from app.dashboard.routes.segment_3_details import seg3_bp
-    from app.dashboard.routes.health import health_bp
     from app.dashboard.routes.sse import sse_bp
 
     app.register_blueprint(seg1_bp)
