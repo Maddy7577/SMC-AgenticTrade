@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Strategies — SMC TradeAgents{% endblock %}
+
+{% block content %}
+<!-- Calendar ticker (FR-UI-06) -->
+<div class="ticker" id="calendar-ticker">
+  {% if upcoming_events %}
+    {% set ev = upcoming_events[0] %}
+    <span class="ticker-label">NEXT EVENT</span>
+    <span class="ticker-event">{{ ev.event_name }} ({{ ev.currency }}) — {{ ev.t | ist }}</span>
+    <span class="impact-{{ ev.impact }}">{{ ev.impact | upper }}</span>
+  {% else %}
+    <span class="ticker-label">No high-impact events in next 7 days</span>
+  {% endif %}
+  <span id="blackout-badge" class="blackout-badge hidden">🚫 BLACKOUT ACTIVE</span>
+</div>
+
+<div class="strategy-grid" id="strategy-grid">
+  {% for card in cards %}
+  <div class="strategy-card" data-strategy="{{ card.strategy_id }}">
+    <div class="card-header">
+      <h3>{{ card.strategy_name }}</h3>
+      {% if card.last_signal %}
+      <span class="badge badge-{{ card.last_signal.verdict | lower | replace('_', '-') }}">
+        {{ card.last_signal.verdict | replace('_', ' ') }}
+      </span>
+      {% else %}
+      <span class="badge badge-no-trade">NO TRADE</span>
+      {% endif %}
+    </div>
+
+    <div class="card-body">
+      {% if card.last_signal and card.last_signal.verdict != 'NO_TRADE' %}
+        <div class="signal-info">
+          <span class="direction-{{ card.last_signal.direction }}">{{ card.last_signal.direction | upper if card.last_signal.direction else '—' }}</span>
+          <span class="mono conf">{{ "%.0f"|format(card.last_signal.confidence) }}/100</span>
+          {% if card.last_signal.entry %}
+          <a href="/signal/{{ card.last_signal.id }}" class="details-link">→ Details</a>
+          {% endif %}
+        </div>
+        {% if card.last_signal.entry %}
+        <div class="levels">
+          <span>E: <span class="mono copyable" data-val="{{ card.last_signal.entry }}">{{ "%.5f"|format(card.last_signal.entry) }}</span></span>
+          <span>SL: <span class="mono copyable" data-val="{{ card.last_signal.sl }}">{{ "%.5f"|format(card.last_signal.sl) }}</span></span>
+          <span>TP1: <span class="mono copyable" data-val="{{ card.last_signal.tp1 }}">{{ "%.5f"|format(card.last_signal.tp1) }}</span></span>
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="muted small">Waiting for setup…</p>
+      {% endif %}
+    </div>
+
+    <!-- Last 10 signal dots -->
+    <div class="signal-dots">
+      {% for sig in card.last_10 %}
+      <span class="dot dot-{{ sig.verdict | lower | replace('_', '-') }}" title="{{ sig.verdict }} {{ sig.t | ist }}"></span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // SSE auto-refresh (FR-UI-03, NFR-P-04)
+  const source = new EventSource('/stream/signals');
+  source.onmessage = function(e) {
+    // Simple: reload the page on any new signal
+    location.reload();
+  };
+  source.onerror = function() {
+    // Fallback: poll every 15s
+    setTimeout(() => location.reload(), 15000);
+  };
+</script>
+{% endblock %}

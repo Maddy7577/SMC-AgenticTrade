@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SMC TradeAgents{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="nav-brand">SMC TradeAgents</a>
+    <div class="nav-links">
+      <a href="/" class="{% if request.path == '/' %}active{% endif %}">Performance</a>
+      <a href="/strategies" class="{% if request.path.startswith('/strategies') %}active{% endif %}">Strategies</a>
+    </div>
+    <div class="nav-health" id="health-indicator" title="Connection status">⬤ connecting…</div>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

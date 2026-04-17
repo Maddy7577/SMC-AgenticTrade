@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Performance — SMC TradeAgents{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Performance</h1>
+
+<section class="card">
+  <h2>Strategy Leaderboard</h2>
+  {% if stats %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>30d Trades</th>
+        <th>30d Win Rate</th>
+        <th>30d Avg RR</th>
+        <th>Expectancy</th>
+        <th>All-time</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in stats %}
+      <tr {% if s.expectancy_30d < 0 and s.trades_alltime >= 50 %}class="flagged"{% endif %}>
+        <td>{{ s.strategy_id }}</td>
+        <td class="mono">{{ s.trades_30d }}</td>
+        <td class="mono {% if s.win_rate_30d >= 0.5 %}positive{% else %}negative{% endif %}">{{ "%.0f%%"|format(s.win_rate_30d * 100) }}</td>
+        <td class="mono">{{ "%.2f"|format(s.avg_rr_30d) }}</td>
+        <td class="mono {% if s.expectancy_30d >= 0 %}positive{% else %}negative{% endif %}">{{ "%.2f"|format(s.expectancy_30d) }}</td>
+        <td class="mono">{{ s.trades_alltime }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No outcome data yet — trade results will appear here.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Recent Trade History</h2>
+  {% if trades %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Time (IST)</th>
+        <th>Strategy</th>
+        <th>Direction</th>
+        <th>Entry</th>
+        <th>SL</th>
+        <th>TP1</th>
+        <th>RR</th>
+        <th>Outcome</th>
+        <th>R Realised</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in trades %}
+      <tr>
+        <td class="mono">{{ t.published_t | ist }}</td>
+        <td>{{ t.strategy_id }}</td>
+        <td class="{% if t.direction == 'buy' %}positive{% else %}negative{% endif %}">{{ t.direction | upper }}</td>
+        <td class="mono copyable" data-val="{{ t.entry }}">{{ "%.5f"|format(t.entry) }}</td>
+        <td class="mono copyable" data-val="{{ t.sl }}">{{ "%.5f"|format(t.sl) }}</td>
+        <td class="mono copyable" data-val="{{ t.tp1 }}">{{ "%.5f"|format(t.tp1) }}</td>
+        <td class="mono">{{ "%.2f"|format(t.rr_planned) }}</td>
+        <td class="outcome-{{ t.outcome }}">{{ t.outcome }}</td>
+        <td class="mono {% if t.realized_r and t.realized_r > 0 %}positive{% elif t.realized_r and t.realized_r < 0 %}negative{% endif %}">
+          {% if t.realized_r is not none %}{{ "%.2f"|format(t.realized_r) }}R{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No trades recorded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

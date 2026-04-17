@@ -1,0 +1,118 @@
+"""Strategy orchestrator — subscribes to the CED context queue, dispatches to
+enabled strategies, and writes signals + agent scores to the database (D9, FR-S-10).
+
+Each strategy is isolated in a try/except so a bug in one doesn't kill the engine (NFR-R-04).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import datetime, timezone
+
+from app.detector.context import CanonicalContext
+from app.storage import db as _db
+from app.storage.repositories import insert_agent_score, insert_signal
+from app.strategies.base import BaseStrategy, StrategyResult
+from app.strategies.strategy_01_unicorn import UnicornModelStrategy
+from app.strategies.strategy_02_judas import JudasSwingStrategy
+from app.strategies.strategy_03_confirmation import ConfirmationModelStrategy
+from app.strategies.strategy_04_silver_bullet import SilverBulletStrategy
+from app.strategies.strategy_06_ifvg import IFVGStrategy
+
+log = logging.getLogger(__name__)
+
+ALL_STRATEGIES: list[BaseStrategy] = [
+    ConfirmationModelStrategy(),
+    SilverBulletStrategy(),
+    JudasSwingStrategy(),
+    UnicornModelStrategy(),
+    IFVGStrategy(),
+]
+
+
+class StrategyOrchestrator:
+    def __init__(
+        self,
+        context_queue: asyncio.Queue,
+        signal_queue: asyncio.Queue,
+        db_path=_db.DB_PATH,
+        strategies: list[BaseStrategy] | None = None,
+    ) -> None:
+        self._ctx_q = context_queue
+        self._sig_q = signal_queue
+        self._db_path = db_path
+        self._strategies = strategies if strategies is not None else [s for s in ALL_STRATEGIES if s.enabled]
+
+    async def run(self) -> None:
+        while True:
+            ctx: CanonicalContext = await self._ctx_q.get()
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, self._evaluate_all, ctx
+                )
+            except Exception as exc:
+                log.error("orchestrator error", extra={"error": str(exc)})
+            finally:
+                self._ctx_q.task_done()
+
+    def _evaluate_all(self, ctx: CanonicalContext) -> None:
+        for strategy in self._strategies:
+            if not strategy.enabled:
+                continue
+            try:
+                result = strategy.evaluate(ctx)
+                signal_id = self._persist_result(result, ctx.tick_t)
+                if signal_id:
+                    self._sig_q.put_nowait((signal_id, result))
+                    log.info(
+                        "signal produced",
+                        extra={
+                            "strategy": strategy.strategy_id,
+                            "verdict": result.verdict,
+                            "confidence": result.confidence,
+                            "signal_id": signal_id,
+                        },
+                    )
+            except Exception as exc:
+                log.error(
+                    "strategy evaluation failed",
+                    extra={"strategy": strategy.strategy_id, "error": str(exc)},
+                )
+
+    def _persist_result(self, result: StrategyResult, t: datetime) -> int | None:
+        trade = result.trade
+        with _db.get_connection(self._db_path) as conn:
+            signal_id = insert_signal(
+                conn,
+                t=t,
+                strategy_id=result.strategy_id,
+                verdict=result.verdict,
+                confidence=result.confidence,
+                probability=result.probability,
+                direction=trade.direction if trade else None,
+                entry=trade.entry if trade else None,
+                sl=trade.sl if trade else None,
+                tp1=trade.tp1 if trade else None,
+                tp2=trade.tp2 if trade else None,
+                tp3=trade.tp3 if trade else None,
+                rr=trade.rr if trade else None,
+                signature=result.signature,
+                gate_result="pending",
+                payload={"rejection_reasons": result.rejection_reasons},
+            )
+            if signal_id is None:
+                return None  # duplicate
+
+            for op in result.agent_opinions:
+                insert_agent_score(
+                    conn,
+                    signal_id=signal_id,
+                    agent_id=op.agent_id,
+                    score=op.score,
+                    verdict=op.verdict,
+                    reasons=op.reasons,
+                    evidence=op.evidence,
+                )
+            conn.commit()
+        return signal_id

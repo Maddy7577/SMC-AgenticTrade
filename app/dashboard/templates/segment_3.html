@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Signal {{ signal.id }} — SMC TradeAgents{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+  <h1>Signal #{{ signal.id }} — {{ signal.strategy_id }}</h1>
+  <span class="badge badge-{{ signal.verdict | lower | replace('_', '-') }} large">
+    {{ signal.verdict | replace('_', ' ') }}
+  </span>
+  <span class="mono muted" title="{{ signal.t | ist_tooltip }}">{{ signal.t | ist }}</span>
+</div>
+
+{% if cluster %}
+<div class="cluster-banner">
+  🔗 Cluster: {{ cluster.member_signal_ids | length }} strategies agree —
+  boosted confidence <span class="mono">{{ "%.0f"|format(cluster.boosted_confidence) }}/100</span>
+</div>
+{% endif %}
+
+<!-- Trade parameters -->
+{% if trade %}
+<section class="card">
+  <h2>Trade Plan</h2>
+  <div class="trade-grid">
+    <div>
+      <label>Direction</label>
+      <span class="direction-{{ trade.direction }} large">{{ trade.direction | upper }}</span>
+    </div>
+    <div>
+      <label>Entry</label>
+      <span class="mono copyable" data-val="{{ trade.entry }}">{{ "%.5f"|format(trade.entry) }}</span>
+      <button class="copy-btn" onclick="copyVal('{{ trade.entry }}')">⎘</button>
+    </div>
+    <div>
+      <label>Stop Loss</label>
+      <span class="mono copyable" data-val="{{ trade.sl }}">{{ "%.5f"|format(trade.sl) }}</span>
+      <button class="copy-btn" onclick="copyVal('{{ trade.sl }}')">⎘</button>
+    </div>
+    <div>
+      <label>TP1</label>
+      <span class="mono copyable" data-val="{{ trade.tp1 }}">{{ "%.5f"|format(trade.tp1) }}</span>
+      <button class="copy-btn" onclick="copyVal('{{ trade.tp1 }}')">⎘</button>
+    </div>
+    {% if trade.tp2 %}
+    <div>
+      <label>TP2</label>
+      <span class="mono copyable" data-val="{{ trade.tp2 }}">{{ "%.5f"|format(trade.tp2) }}</span>
+      <button class="copy-btn" onclick="copyVal('{{ trade.tp2 }}')">⎘</button>
+    </div>
+    {% endif %}
+    <div>
+      <label>R:R</label>
+      <span class="mono">1:{{ "%.2f"|format(trade.rr_planned) }}</span>
+    </div>
+    <div>
+      <label>Confidence</label>
+      <span class="mono">{{ "%.0f"|format(signal.confidence) }}/100</span>
+    </div>
+    <div>
+      <label>Probability</label>
+      <span class="mono">{{ "%.0f"|format(signal.probability) }}%</span>
+    </div>
+  </div>
+
+  <!-- TradingView deep link (FR-UI-11) -->
+  {% if trade.entry %}
+  <a class="tv-link" href="https://www.tradingview.com/chart/?symbol=OANDA:EURUSD&interval=1" target="_blank">
+    📈 Open in TradingView
+  </a>
+  {% endif %}
+</section>
+{% endif %}
+
+<!-- 4-agent debate panel -->
+<section class="card">
+  <h2>Agent Debate</h2>
+  <div class="agent-grid">
+    {% for a in agents %}
+    <div class="agent-card agent-{{ a.verdict }}">
+      <div class="agent-header">
+        <span class="agent-id">{{ a.agent_id | upper }}</span>
+        <span class="agent-score mono">{{ "%.0f"|format(a.score) }}</span>
+        <span class="agent-verdict verdict-{{ a.verdict }}">{{ a.verdict | upper }}</span>
+      </div>
+      <ul class="reasons">
+        {% for r in a.reasons %}
+        <li>{{ r }}</li>
+        {% endfor %}
+      </ul>
+      {% if a.evidence %}
+      <details class="evidence-details">
+        <summary>Evidence</summary>
+        <pre class="evidence-json">{{ a.evidence | tojson(indent=2) }}</pre>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Gemini narrative -->
+<section class="card">
+  <h2>AI Narrative</h2>
+  {% if trade and trade.narrative %}
+  <p class="narrative-text">{{ trade.narrative }}</p>
+  {% else %}
+  <p class="muted">Narrative not yet available.</p>
+  {% endif %}
+</section>
+
+<!-- Outcome buttons (FR-P-03, FR-UI-04) -->
+{% if trade %}
+<section class="card">
+  <h2>Record Outcome</h2>
+  <div class="outcome-status">
+    Current: <strong>{{ trade.outcome }}</strong>
+    {% if trade.execution_status %} — {{ trade.execution_status }}{% endif %}
+    {% if trade.realized_r is not none %} — <span class="mono">{{ "%.2f"|format(trade.realized_r) }}R</span>{% endif %}
+  </div>
+  <div class="outcome-buttons">
+    <button class="btn btn-positive" onclick="recordOutcome({{ trade.id }}, 'open', 'taken')">I Took It</button>
+    <button class="btn btn-muted" onclick="recordOutcome({{ trade.id }}, 'open', 'skipped')">I Skipped</button>
+    <button class="btn btn-positive" onclick="recordOutcome({{ trade.id }}, 'tp1_hit', 'taken')">TP1 Hit</button>
+    <button class="btn btn-positive" onclick="recordOutcome({{ trade.id }}, 'tp2_hit', 'taken')">TP2 Hit</button>
+    <button class="btn btn-negative" onclick="recordOutcome({{ trade.id }}, 'sl_hit', 'taken')">SL Hit</button>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyVal(val) {
+  navigator.clipboard.writeText(String(val));
+}
+function recordOutcome(tradeId, outcome, execStatus) {
+  fetch('/api/outcome/' + tradeId, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({outcome: outcome, execution_status: execStatus})
+  }).then(r => r.json()).then(() => location.reload());
+}
+</script>
+{% endblock %}

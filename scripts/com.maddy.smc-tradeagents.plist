@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.maddy.smc-tradeagents</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- Update path to match your actual Python venv or system Python -->
+    <string>/Users/maddy/Documents/Claude Project/SMC-TradeAgents/.venv/bin/python</string>
+    <string>-m</string>
+    <string>app.main</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/maddy/Documents/Claude Project/SMC-TradeAgents</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key>
+    <string>/Users/maddy/Documents/Claude Project/SMC-TradeAgents</string>
+  </dict>
+
+  <!-- Auto-start at login and keep alive (NFR-R-01, R9) -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Log redirect -->
+  <key>StandardOutPath</key>
+  <string>/Users/maddy/Documents/Claude Project/SMC-TradeAgents/logs/launchd_stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/maddy/Documents/Claude Project/SMC-TradeAgents/logs/launchd_stderr.log</string>
+</dict>
+</plist>

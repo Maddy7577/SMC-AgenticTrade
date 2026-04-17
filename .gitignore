@@ -1,0 +1,28 @@
+# Environment
+.env
+
+# Database
+data/smc.db
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
