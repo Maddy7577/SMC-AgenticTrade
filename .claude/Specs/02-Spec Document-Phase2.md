@@ -102,6 +102,8 @@ All user stories from Phase 1 (US-01 through US-10) remain in effect with the sa
 | FR-S2-03 | Each strategy SHALL produce one verdict per evaluation cycle: VALID TRADE, WAIT FOR LEVELS, or NO TRADE, with the same threshold logic (VALID ≥ 75, WAIT ≥ 65) |
 | FR-S2-04 | All verdicts SHALL be persisted to `signals` table with per-agent scores in `agent_scores` table, using strategy IDs `05_nested_fvg`, `07_ote_fvg`, `08_rejection_block`, `09_mmm`, `10_po3`, `11_propulsion`, `12_vacuum`, `13_reclaimed_fvg`, `14_cisd`, `15_bpr_ob` |
 | FR-S2-05 | Phase 2 strategies SHALL be added to `ALL_STRATEGIES` in `app/strategies/orchestrator.py` and run in the same parallel evaluation loop as Phase 1 strategies |
+| FR-S2-06 | All Phase 2 strategies SHALL be subject to the same 9 gate vetoes as Phase 1 (Architecture §7): Monday veto, 20-min post-SL cooling period, two-loss daily stop, news blackout ±30 min, 15-trade monthly cap, RR ≥ 2.0, confidence thresholds (VALID ≥ 75 / WAIT ≥ 65), spread < 1.5 pips, premium/discount zone alignment. No new gate veto rules are introduced in Phase 2 |
+| FR-S2-07 | Phase 2 strategies SHALL inherit the `confidence_multiplier` feedback system from Phase 1 (Architecture §11.3): after 20 logged trades per strategy, the multiplier adjusts from rolling expectancy. Starting multiplier = 1.0 for all new strategies. No new implementation required — existing Phase 1 mechanism applies automatically |
 
 ### 3.3 Strategy-specific behavior — FR-SP2
 
@@ -244,6 +246,7 @@ All user stories from Phase 1 (US-01 through US-10) remain in effect with the sa
 | FR-CL2-05 | Within the Confirmation family, representative priority order: Unicorn > Silver Bullet > MMM > CISD > Confirmation |
 | FR-CL2-06 | PO3 and Judas Swing may cluster when sharing the same manipulation event; Judas is always representative when both fire |
 | FR-CL2-07 | `app/clustering/ancestry.py` SHALL be updated to add Phase 2 strategies |
+| FR-CL2-08 | The confluence boost from Architecture §6.3 SHALL apply to all Phase 2 clustered signals at the same rates as Phase 1: +10% confidence boost for a 2-strategy cluster, +15% for a 3+-strategy cluster, capped at +20% total boost. No implementation change required — existing cluster engine applies this automatically |
 
 ### 3.5 Dashboard scaling — FR-UI2
 
@@ -304,10 +307,12 @@ All user stories from Phase 1 (US-01 through US-10) remain in effect with the sa
 
 ## 5. Data Specification
 
-No new tables are required. The existing schema from Phase 1 accommodates all Phase 2 data through:
+No new tables are required beyond Phase 1. Phase 2 extends the existing schema through:
 - `events` table — new `event_type` values for `fibonacci_impulse`, `gap_formed`, `gap_filled`, `fvg_ce_test`, `mmm_phase_change`, `amd_manipulation_detected`
 - `signals` table — new `strategy_id` values for the 10 Phase 2 strategies
 - `settings` KV table — new keys for `mmm_phase`, `amd_state`, `last_gap_check`
+
+**Note on `settings` KV table:** Phase 2 requires a `settings` key-value table for persisting MMM phase state and AMD state across restarts (NFR-R2-03). If this table was not created in Phase 1, it must be created at Phase 2 migration time. Schema: `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)`.
 
 ### 5.1 New event_type values
 

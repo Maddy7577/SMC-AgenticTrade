@@ -1,14 +1,15 @@
 # SMC-TradeAgents — System Architecture
 
-**Version:** 1.1 (design only, no implementation yet)
-**Date:** 2026-04-16
-**Status:** Architecture approved; open questions resolved; awaiting approval of Phase 1 implementation plan
+**Version:** 1.2 (design only, no implementation yet)
+**Date:** 2026-04-18
+**Status:** Architecture approved; Phase 1 complete; Phase 2 spec and plan approved
 **Owner:** Maddy
 **Timezone convention:** all internal timestamps stored in UTC; all user-facing displays rendered in **IST (Asia/Kolkata, UTC+5:30)**.
 
 ### Revision history
 - **1.0 (2026-04-16)** — initial architecture, 7-route dashboard, Ollama narrative, Telegram alerts.
 - **1.1 (2026-04-16)** — Gemini 2.0 Flash (free) replaces Ollama; Telegram deferred out of Phase 1; dashboard redesigned as 3-segment web app; IST as display timezone; Monday veto; confidence thresholds (VALID ≥ 75, WAIT ≥ 65); confluence boost accepted; Phase 1 hosting on Mac (launchd), migration path to Oracle Cloud Always Free for Phase 2+.
+- **1.2 (2026-04-18)** — Phase plan restructured: Phase 2 now delivers all 10 remaining strategies (#5, #7–#15) bringing total to 15; Phase 3 becomes Oracle Cloud Always Free migration and infrastructure hardening only. Architecture diagram and §9.2 / §13 updated accordingly.
 
 ---
 
@@ -26,7 +27,7 @@ The system is **analysis only**. No auto-execution. No paid services.
 - **Deterministic rule-based agents**, not LLM calls for detection — cost, speed, reliability
 - **Shared Canonical Event Detector** feeds all 60 agents to eliminate duplicate work
 - **2-layer de-duplication** via canonical signatures and parent/child strategy ancestry
-- **3-phase delivery**: 5 strategies per phase
+- **3-phase delivery**: Phase 1 = 5 strategies; Phase 2 = all 15 strategies; Phase 3 = infrastructure migration
 - **Data hybrid**: OANDA demo (primary feed) + Finnhub free (calendar) + TradingView Premium (manual verification + optional Pine alerts)
 - **Narrative LLM: Gemini 2.0 Flash free tier** — invoked only on published (VALID/WAIT) signals to generate human-readable rationale in Segment 3
 - **Single output surface in Phase 1: web dashboard** (3 segments). Telegram and other alert channels deferred to future phases.
@@ -62,7 +63,7 @@ The system is **analysis only**. No auto-execution. No paid services.
           │                       │                       │
 ┌─────────▼────────┐    ┌─────────▼────────┐    ┌─────────▼────────┐
 │ STRATEGY AGENTS  │    │ STRATEGY AGENTS  │    │ STRATEGY AGENTS  │
-│   (Phase 1)      │    │   (Phase 2)      │    │   (Phase 3)      │
+│   (Phase 1)      │    │   (Phase 2 add)  │    │  (Phase 2 add)   │
 │  5 strategies    │    │  5 strategies    │    │  5 strategies    │
 │  × 4 agents each │    │  × 4 agents each │    │  × 4 agents each │
 │  = 20 agents     │    │  = 20 agents     │    │  = 20 agents     │
@@ -415,7 +416,7 @@ Framework: Flask backend + server-rendered templates + Plotly.js for charts. Van
 
 **Purpose:** live board showing current state of every enabled strategy.
 
-- One card per active strategy (5 in Phase 1, 10 in Phase 2, 15 in Phase 3)
+- One card per active strategy (5 in Phase 1, 15 in Phase 2)
 - Grid layout: 3-4 cards per row on desktop, 1 per row on mobile
 - Auto-refresh every 15 seconds
 - **Economic calendar ticker strip** pinned at the top: next high-impact USD/EUR event + countdown + "BLACKOUT ACTIVE" label if within ±30 min
@@ -594,15 +595,25 @@ SMC-TradeAgents/
 
 **Deliverable:** End-to-end working system producing VALID/WAIT/NO TRADE signals on live EURUSD during London & NY sessions, with audit trail.
 
-### Phase 2 — Zone specialists
-**Adds:** 7 OTE+FVG, 8 Rejection Block, 5 Nested FVGs, 13 Reclaimed FVG, 15 BPR in OB.
-Requires: richer FVG lifecycle tracking (tests, respects), Fibonacci module, long-wick classifier.
+### Phase 2 — Full strategy expansion (all 15 strategies)
+**Adds:** 5 Nested FVGs, 7 OTE+FVG, 8 Rejection Block, 9 Market Maker Model, 10 Power of 3, 11 Propulsion Block, 12 Vacuum Block, 13 Reclaimed FVG, 14 CISD, 15 BPR in OB.
 
-### Phase 3 — HTF framework + niche
-**Adds:** 9 MMM, 10 PO3, 11 Propulsion, 12 Vacuum, 14 CISD.
-Requires: phase-state machine for MMM, gap detector, propulsion validator.
+**New CED primitives required:** Fibonacci module (body-to-body), long-wick classifier, gap detector, AMD phase tracker, MMM phase state machine, FVG CE-test history enrichment.
 
-**Gate to move phases:** each strategy has at least 20 logged signals (live or backtest-replay) and performance tracker is populated.
+**Deliverable:** All 15 strategies live, Segment 2 showing 15 cards, full clustering ancestry tree active, dashboard evidence panels for all strategy types.
+
+**Gate to Phase 3:** Phase 2 engine stable for ≥2 weeks; ≥25 signals recorded; at least one signal from each of the 10 new strategies observed.
+
+### Phase 3 — Infrastructure migration (Oracle Cloud Always Free)
+**Scope:** Migrate from Mac launchd to Oracle Cloud Always Free VM (1 OCPU ARM, 6 GB RAM) for 24/7 uptime. No new strategies or analysis logic.
+
+**Deliverables:**
+- Engine deployed to Oracle Cloud Always Free VM via `systemd`
+- Dashboard behind Cloudflare Tunnel (free) with HTTP basic auth
+- Mac retained as fallback during migration testing period
+- Uptime target: < 10 minutes cumulative downtime per month
+
+**Gate to Phase 3:** Oracle Cloud account created by Maddy; Cloudflare Tunnel configured.
 
 ---
 
@@ -625,7 +636,7 @@ Requires: phase-state machine for MMM, gap detector, propulsion validator.
 | Formatting / lint | `ruff` (single tool) | Free |
 | Env | `python-dotenv` | Free |
 | Process manager (Phase 1) | `launchd` plist on Mac (auto-start at login) | Free |
-| Process manager (Phase 2+ migration) | `systemd` on Oracle Cloud Always Free VM | Free |
+| Process manager (Phase 3 migration) | `systemd` on Oracle Cloud Always Free VM | Free |
 
 No paid services. TradingView Premium used for manual verification only (already paid, not a project cost).
 
@@ -656,7 +667,7 @@ Confluence boost accepted as starting values: +10% for 2-strategy cluster, +15% 
 - No keys ever logged
 - SQLite file in `data/`, gitignored
 - Dashboard bound to `127.0.0.1` only (local-only, no public exposure in Phase 1)
-- When Phase 2+ migrates to Oracle Cloud: dashboard behind Cloudflare Tunnel (free) with basic auth — not publicly indexable
+- When Phase 3 migrates to Oracle Cloud: dashboard behind Cloudflare Tunnel (free) with basic auth — not publicly indexable
 
 ---
 
@@ -678,7 +689,7 @@ All Section 18 questions from v1.0 have been answered. Locked decisions:
 |---|----------|----------|
 | 1 | Telegram bot | **Deferred out of Phase 1.** Web dashboard is the sole output surface. |
 | 2 | OANDA demo account | Not yet registered — included as Phase 1 setup task (register + generate token). |
-| 3 | Hosting | **Mac launchd for Phase 1** (fast iteration, simple). Migration path to Oracle Cloud Always Free VM in Phase 2+ once system is stable and 24/7 uptime matters more than iteration speed. |
+| 3 | Hosting | **Mac launchd for Phase 1 and Phase 2** (fast iteration, simple). Migration to Oracle Cloud Always Free VM in Phase 3 once all 15 strategies are stable and 24/7 uptime matters more than iteration speed. |
 | 4 | Confluence boost | **Accepted as starting values**: +10% for 2-strategy, +15% for 3+, cap +20%. Tunable after Phase 1 data. |
 | 5 | Monday filter | **Hard veto** — no signals published on Mondays. Simpler than a penalty, aligned with source doc's 44% WR warning. |
 | 6 | VALID confidence threshold | **75** (strict). WAIT threshold = 65. Both tunable after 20+ logged signals per strategy. |
