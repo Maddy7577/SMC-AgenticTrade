@@ -42,6 +42,12 @@ GEMINI_NARRATIVE_MIN_WORDS: int = 80
 GEMINI_NARRATIVE_MAX_WORDS: int = 150
 
 # ---------------------------------------------------------------------------
+# Telegram alerts
+# ---------------------------------------------------------------------------
+TELEGRAM_BOT_TOKEN: str = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID: str = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+# ---------------------------------------------------------------------------
 # Timeframes ingested (OANDA granularity codes)
 # ---------------------------------------------------------------------------
 TIMEFRAMES: list[str] = ["M1", "M5", "M15", "H1", "H4", "D"]

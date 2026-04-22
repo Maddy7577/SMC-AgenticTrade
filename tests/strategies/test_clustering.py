@@ -124,3 +124,63 @@ def test_parse_invalid_signature_returns_none():
     assert parse_strategy_signature("") is None
     assert parse_strategy_signature("garbage") is None
     assert parse_strategy_signature("only:two:parts") is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 ancestry rules (FR-CL2-*)
+# ---------------------------------------------------------------------------
+
+def test_cisd_clusters_with_unicorn():
+    assert can_cluster_together("14_cisd", "01_unicorn") is True
+
+
+def test_mmm_clusters_with_silver_bullet():
+    assert can_cluster_together("09_mmm", "04_silver_bullet") is True
+
+
+def test_bpr_cannot_cluster_with_unicorn():
+    assert can_cluster_together("15_bpr_ob", "01_unicorn") is False
+
+
+def test_bpr_cannot_cluster_with_confirmation():
+    assert can_cluster_together("15_bpr_ob", "03_confirmation") is False
+
+
+def test_po3_clusters_with_judas():
+    assert can_cluster_together("10_po3", "02_judas") is True
+
+
+def test_judas_is_representative_over_po3():
+    rep = select_representative(["10_po3", "02_judas"])
+    assert rep == "02_judas"
+
+
+def test_mmm_priority_below_silver_bullet():
+    rep = select_representative(["09_mmm", "04_silver_bullet"])
+    assert rep == "04_silver_bullet"
+
+
+def test_unicorn_priority_over_mmm_and_cisd():
+    rep = select_representative(["14_cisd", "09_mmm", "01_unicorn", "03_confirmation"])
+    assert rep == "01_unicorn"
+
+
+def test_nested_fvg_independent_root():
+    assert can_cluster_together("05_nested_fvg", "01_unicorn") is False
+    assert can_cluster_together("05_nested_fvg", "05_nested_fvg") is False
+
+
+def test_ote_fvg_independent_root():
+    assert can_cluster_together("07_ote_fvg", "04_silver_bullet") is False
+
+
+def test_rejection_block_independent_root():
+    assert can_cluster_together("08_rejection_block", "01_unicorn") is False
+
+
+def test_vacuum_independent_root():
+    assert can_cluster_together("12_vacuum", "03_confirmation") is False
+
+
+def test_reclaimed_fvg_independent_root():
+    assert can_cluster_together("13_reclaimed_fvg", "09_mmm") is False

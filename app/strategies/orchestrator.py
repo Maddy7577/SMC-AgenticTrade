@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime
 
 from app.detector.context import CanonicalContext
@@ -18,16 +19,38 @@ from app.strategies.strategy_01_unicorn import UnicornModelStrategy
 from app.strategies.strategy_02_judas import JudasSwingStrategy
 from app.strategies.strategy_03_confirmation import ConfirmationModelStrategy
 from app.strategies.strategy_04_silver_bullet import SilverBulletStrategy
+from app.strategies.strategy_05_nested_fvg import NestedFVGStrategy
 from app.strategies.strategy_06_ifvg import IFVGStrategy
+from app.strategies.strategy_07_ote_fvg import OTEFVGStrategy
+from app.strategies.strategy_08_rejection_block import RejectionBlockStrategy
+from app.strategies.strategy_09_mmm import MMMStrategy
+from app.strategies.strategy_10_po3 import PO3Strategy
+from app.strategies.strategy_11_propulsion import PropulsionBlockStrategy
+from app.strategies.strategy_12_vacuum import VacuumBlockStrategy
+from app.strategies.strategy_13_reclaimed_fvg import ReclaimedFVGStrategy
+from app.strategies.strategy_14_cisd import CISDStrategy
+from app.strategies.strategy_15_bpr_ob import BPRInOBStrategy
 
 log = logging.getLogger(__name__)
 
 ALL_STRATEGIES: list[BaseStrategy] = [
+    # Phase 1
     ConfirmationModelStrategy(),
     SilverBulletStrategy(),
     JudasSwingStrategy(),
     UnicornModelStrategy(),
     IFVGStrategy(),
+    # Phase 2
+    NestedFVGStrategy(),
+    OTEFVGStrategy(),
+    RejectionBlockStrategy(),
+    MMMStrategy(),
+    PO3Strategy(),
+    PropulsionBlockStrategy(),
+    VacuumBlockStrategy(),
+    ReclaimedFVGStrategy(),
+    CISDStrategy(),
+    BPRInOBStrategy(),
 ]
 
 
@@ -57,12 +80,14 @@ class StrategyOrchestrator:
                 self._ctx_q.task_done()
 
     def _evaluate_all(self, ctx: CanonicalContext) -> None:
+        t0 = time.perf_counter()
         for strategy in self._strategies:
             if not strategy.enabled:
                 continue
             try:
                 result = strategy.evaluate(ctx)
-                signal_id = self._persist_result(result, ctx.tick_t)
+                evidence = strategy.build_evidence(ctx)
+                signal_id = self._persist_result(result, ctx.tick_t, evidence=evidence)
                 if signal_id:
                     self._sig_q.put_nowait((signal_id, result))
                     log.info(
@@ -79,8 +104,13 @@ class StrategyOrchestrator:
                     "strategy evaluation failed",
                     extra={"strategy": strategy.strategy_id, "error": str(exc)},
                 )
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        if elapsed_ms > 500:
+            log.warning("strategy pass over budget", extra={"elapsed_ms": round(elapsed_ms, 1), "budget_ms": 500})
+        else:
+            log.info("strategy pass complete", extra={"elapsed_ms": round(elapsed_ms, 1)})
 
-    def _persist_result(self, result: StrategyResult, t: datetime) -> int | None:
+    def _persist_result(self, result: StrategyResult, t: datetime, evidence: dict | None = None) -> int | None:
         trade = result.trade
         with _db.get_connection(self._db_path) as conn:
             signal_id = insert_signal(
@@ -99,7 +129,7 @@ class StrategyOrchestrator:
                 rr=trade.rr if trade else None,
                 signature=result.signature,
                 gate_result="pending",
-                payload={"rejection_reasons": result.rejection_reasons},
+                payload={"rejection_reasons": result.rejection_reasons, "evidence": evidence or {}},
             )
             if signal_id is None:
                 return None  # duplicate

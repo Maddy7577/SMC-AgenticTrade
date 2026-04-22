@@ -55,6 +55,15 @@ def evaluate_signal(
         now = datetime.now(tz=timezone.utc)
         now_ist = now.astimezone(TZ_IST)
 
+        # --- Veto 0: Strategy disabled ---
+        strategy_id = signal.get("strategy_id", "")
+        if get_setting(conn, f"strategy_enabled:{strategy_id}", "1") == "0":
+            reason = "vetoed:strategy_disabled"
+            update_signal_gate(conn, signal_id, reason)
+            conn.commit()
+            log.info("gate veto: strategy disabled", extra={"signal_id": signal_id, "strategy_id": strategy_id})
+            return GateDecision(False, reason)
+
         # --- Veto 1: Monday (FR-G-04) ---
         if now_ist.weekday() == 0:  # Monday = 0
             reason = "vetoed:monday"
@@ -101,7 +110,15 @@ def evaluate_signal(
         # --- Veto 5: Confidence floor (FR-G-01) ---
         verdict = signal["verdict"]
         confidence = signal["confidence"]
-        threshold = CONFIDENCE_VALID_THRESHOLD if verdict == "VALID" else CONFIDENCE_WAIT_THRESHOLD
+        # Per-strategy threshold override takes precedence over global
+        custom_threshold = get_setting(conn, f"strategy_conf_threshold:{strategy_id}")
+        if custom_threshold:
+            try:
+                threshold = float(custom_threshold)
+            except ValueError:
+                threshold = CONFIDENCE_VALID_THRESHOLD if verdict == "VALID" else CONFIDENCE_WAIT_THRESHOLD
+        else:
+            threshold = CONFIDENCE_VALID_THRESHOLD if verdict == "VALID" else CONFIDENCE_WAIT_THRESHOLD
         if confidence < threshold:
             reason = f"vetoed:confidence_{confidence:.1f}"
             update_signal_gate(conn, signal_id, reason)

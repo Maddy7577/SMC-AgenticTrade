@@ -56,13 +56,18 @@ async def replay(date_str: str) -> None:
     ced = CEDPipeline(stream_q, context_q)
     orchestrator = StrategyOrchestrator(context_q, signal_q)
 
+    # Start CED as a concurrent task so it reads from stream_q and writes to context_q
+    ced_task = asyncio.create_task(ced.run())
+
     for candle in day_candles:
         await stream_q.put(candle)
 
-    # Process
+    # Process one ctx per candle fed in
     for _ in day_candles:
-        ctx = await asyncio.wait_for(context_q.get(), timeout=5)
+        ctx = await asyncio.wait_for(context_q.get(), timeout=30)
         await asyncio.get_event_loop().run_in_executor(None, orchestrator._evaluate_all, ctx)
+
+    ced_task.cancel()
 
     # Gate all produced signals
     total = 0

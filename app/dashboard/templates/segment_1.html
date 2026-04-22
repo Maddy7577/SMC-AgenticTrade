@@ -2,7 +2,10 @@
 {% block title %}Performance — SMC TradeAgents{% endblock %}
 
 {% block content %}
-<h1 class="page-title">Performance</h1>
+<div class="page-header">
+  <h1 class="page-title">Performance</h1>
+  <button class="btn btn-settings" id="open-settings">⚙ Strategy Settings</button>
+</div>
 
 <section class="card">
   <h2>Strategy Leaderboard</h2>
@@ -16,17 +19,19 @@
         <th>30d Avg RR</th>
         <th>Expectancy</th>
         <th>All-time</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody>
       {% for s in stats %}
-      <tr {% if s.expectancy_30d < 0 and s.trades_alltime >= 50 %}class="flagged"{% endif %}>
+      <tr {% if s.disabled %}class="strategy-disabled"{% elif s.expectancy_30d < 0 and s.trades_alltime >= 50 %}class="flagged"{% endif %}>
         <td>{{ s.strategy_id }}</td>
         <td class="mono">{{ s.trades_30d }}</td>
         <td class="mono {% if s.win_rate_30d >= 0.5 %}positive{% else %}negative{% endif %}">{{ "%.0f%%"|format(s.win_rate_30d * 100) }}</td>
         <td class="mono">{{ "%.2f"|format(s.avg_rr_30d) }}</td>
         <td class="mono {% if s.expectancy_30d >= 0 %}positive{% else %}negative{% endif %}">{{ "%.2f"|format(s.expectancy_30d) }}</td>
         <td class="mono">{{ s.trades_alltime }}</td>
+        <td>{% if s.disabled %}<span class="badge-disabled">disabled</span>{% else %}<span class="badge-enabled">active</span>{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -75,4 +80,122 @@
   <p class="muted">No trades recorded yet.</p>
   {% endif %}
 </section>
+
+<!-- Settings Modal -->
+<div class="modal-overlay hidden" id="settings-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Strategy Settings</h2>
+      <button class="modal-close" id="close-settings" aria-label="Close">✕</button>
+    </div>
+    <p class="modal-subtitle muted">Disable a strategy to veto all its signals at the gate. Confidence threshold overrides the global floor (VALID 75 / WAIT 65) for that strategy only.</p>
+
+    <div class="settings-table-wrap">
+    <table class="settings-table data-table">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th style="text-align:center">Enabled</th>
+          <th>Min Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sid, name in [
+          ("01_unicorn","Unicorn Model"), ("02_judas","Judas Swing"),
+          ("03_confirmation","Confirmation Model"), ("04_silver_bullet","Silver Bullet"),
+          ("05_nested_fvg","Nested FVG Stack"), ("06_ifvg","Inverted FVG"),
+          ("07_ote_fvg","OTE + FVG"), ("08_rejection_block","Rejection Block"),
+          ("09_mmm","Market Maker Model"), ("10_po3","Power of 3 / AMD"),
+          ("11_propulsion","Propulsion Block"), ("12_vacuum","Vacuum Block"),
+          ("13_reclaimed_fvg","Reclaimed FVG"), ("14_cisd","CISD"),
+          ("15_bpr_ob","BPR in OB")
+        ] %}
+        <tr data-sid="{{ sid }}">
+          <td>
+            <span class="strat-name">{{ name }}</span>
+            <span class="strat-id muted"> · {{ sid }}</span>
+          </td>
+          <td style="text-align:center">
+            <label class="toggle-switch">
+              <input type="checkbox" class="strat-enabled"
+                {% if overrides.get(sid, {}).get('enabled', True) %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td>
+            <input type="number" class="strat-threshold conf-input"
+              min="0" max="100" step="1" placeholder="global default"
+              value="{{ overrides.get(sid, {}).get('threshold') or '' }}">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <div class="modal-footer">
+      <span class="save-status muted" id="save-status"></span>
+      <button class="btn btn-muted" id="cancel-settings">Cancel</button>
+      <button class="btn btn-positive" id="save-settings">Save Settings</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const modal = document.getElementById('settings-modal');
+  const openBtn = document.getElementById('open-settings');
+  const closeBtn = document.getElementById('close-settings');
+  const cancelBtn = document.getElementById('cancel-settings');
+  const saveBtn = document.getElementById('save-settings');
+  const saveStatus = document.getElementById('save-status');
+
+  function openModal() { modal.classList.remove('hidden'); }
+  function closeModal() { modal.classList.add('hidden'); saveStatus.textContent = ''; }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) closeModal();
+  });
+
+  saveBtn.addEventListener('click', async function() {
+    const rows = modal.querySelectorAll('tr[data-sid]');
+    const payload = {};
+    rows.forEach(function(row) {
+      const sid = row.dataset.sid;
+      const enabled = row.querySelector('.strat-enabled').checked;
+      const thresholdVal = row.querySelector('.strat-threshold').value.trim();
+      payload[sid] = {
+        enabled: enabled,
+        threshold: thresholdVal === '' ? null : parseFloat(thresholdVal),
+      };
+    });
+
+    saveBtn.disabled = true;
+    saveStatus.textContent = 'Saving…';
+    try {
+      const r = await fetch('/api/strategy-settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) {
+        saveStatus.style.color = 'var(--green)';
+        saveStatus.textContent = '✓ Saved — reload to refresh leaderboard';
+      } else {
+        saveStatus.style.color = 'var(--red)';
+        saveStatus.textContent = '✗ Save failed';
+      }
+    } catch {
+      saveStatus.style.color = 'var(--red)';
+      saveStatus.textContent = '✗ Network error';
+    }
+    saveBtn.disabled = false;
+  });
+})();
+</script>
 {% endblock %}

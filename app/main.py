@@ -27,7 +27,8 @@ from app.ingestion.poller import CandlePoller
 from app.ingestion.stream_consumer import StreamConsumer
 from app.logging_config import setup_logging
 from app.performance.tracker import check_open_trades
-from app.storage.db import bootstrap
+from app.storage.db import bootstrap, get_connection
+from app.storage.repositories import prune_old_events
 from app.strategies.orchestrator import StrategyOrchestrator
 from config.settings import FLASK_HOST, FLASK_PORT
 
@@ -45,6 +46,12 @@ def run_flask(stream: StreamConsumer, finnhub: FinnhubClient) -> None:
 async def main() -> None:
     log.info("SMC-TradeAgents starting")
     bootstrap()
+
+    # Prune stale events on startup (keep 90 days)
+    with get_connection() as conn:
+        deleted = prune_old_events(conn, days=90)
+    if deleted:
+        log.info("pruned old events", extra={"rows_deleted": deleted})
 
     oanda = OandaClient()
     poller = CandlePoller(oanda)
@@ -90,9 +97,16 @@ async def main() -> None:
         trigger = {"instrument": "EUR_USD", "t": datetime.now(tz=timezone.utc)}
         asyncio.run_coroutine_threadsafe(stream_candle_q.put(trigger), loop)
 
+    def daily_prune():
+        with get_connection() as conn:
+            n = prune_old_events(conn, days=90)
+        if n:
+            log.info("daily event prune", extra={"rows_deleted": n})
+
     scheduler = BackgroundScheduler(timezone="UTC")
     scheduler.add_job(poll_and_trigger, "interval", seconds=60, id="candle_poll")
     scheduler.add_job(finnhub.refresh, "interval", seconds=900, id="finnhub_poll")
+    scheduler.add_job(daily_prune, "cron", hour=2, minute=0, id="event_prune")
     scheduler.add_job(
         lambda: check_open_trades({"EUR_USD": stream._latest_bid.get("EUR_USD", 0.0)}),
         "interval",

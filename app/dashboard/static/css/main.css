@@ -103,6 +103,11 @@ body {
 .levels { display: flex; gap: 1rem; font-size: 0.85rem; flex-wrap: wrap; }
 .levels span { color: var(--muted); }
 
+/* Watching levels (NO_TRADE with computed setup) */
+.watching-levels { opacity: 0.7; }
+.rejection-reasons { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.4rem; }
+.reason-tag { font-size: 0.7rem; background: var(--border); color: var(--muted); padding: 2px 6px; border-radius: 4px; }
+
 /* Signal dots */
 .signal-dots { display: flex; gap: 4px; margin-top: 0.75rem; flex-wrap: wrap; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
@@ -128,7 +133,7 @@ body {
 .impact-medium { color: var(--yellow); font-size: 0.8rem; }
 .impact-low { color: var(--muted); font-size: 0.8rem; }
 .blackout-badge { background: rgba(248, 81, 73, 0.2); color: var(--red); border: 1px solid var(--red); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-left: auto; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 /* Detail page */
 .detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
@@ -182,9 +187,87 @@ body {
 .direction-buy { color: var(--green); font-weight: 600; }
 .direction-sell { color: var(--red); font-weight: 600; }
 
+/* Page header row (title + settings button) */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem; }
+.page-header .page-title { margin-bottom: 0; }
+
+/* Strategy-specific row states in leaderboard */
+.data-table tr.strategy-disabled td { opacity: 0.4; }
+.badge-disabled { background: rgba(139,148,158,0.15); color: var(--muted); border: 1px solid var(--border); border-radius: 10px; padding: 0.15rem 0.5rem; font-size: 0.75rem; }
+.badge-enabled  { background: rgba(63,185,80,0.12);  color: var(--green);  border: 1px solid var(--green);  border-radius: 10px; padding: 0.15rem 0.5rem; font-size: 0.75rem; }
+
+/* Settings button */
+.btn-settings { border-color: var(--border); color: var(--muted); background: transparent; font-size: 0.9rem; }
+.btn-settings:hover { color: var(--text); border-color: var(--blue); }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%; max-width: 680px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 1rem; font-weight: 600; color: var(--blue); }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 0.1rem 0.4rem; border-radius: 4px; }
+.modal-close:hover { color: var(--text); background: var(--border); }
+.modal-subtitle { padding: 0.5rem 1.25rem; font-size: 0.8rem; }
+
+/* Settings table inside modal */
+.settings-table { width: 100%; }
+.modal-box > .settings-table,
+.modal-box > div > .settings-table { overflow-y: auto; }
+.settings-table-wrap { overflow-y: auto; flex: 1; padding: 0 1.25rem; }
+.strat-id { font-size: 0.75rem; }
+.conf-input {
+  width: 90px; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 4px; padding: 0.2rem 0.4rem;
+  font-size: 0.85rem; font-family: inherit;
+}
+.conf-input:focus { outline: none; border-color: var(--blue); }
+.conf-input::placeholder { color: var(--muted); font-size: 0.75rem; }
+
+/* Toggle switch */
+.toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; border-radius: 20px;
+  background: var(--border); cursor: pointer; transition: background 0.2s;
+}
+.toggle-slider:before {
+  content: ""; position: absolute;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--muted); bottom: 3px; left: 3px; transition: 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: rgba(63,185,80,0.35); }
+.toggle-switch input:checked + .toggle-slider:before { background: var(--green); transform: translateX(16px); }
+
+/* Modal footer */
+.modal-footer {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.save-status { font-size: 0.85rem; margin-right: auto; }
+
 /* Responsive — single column on mobile (FR-UI-09) */
 @media (max-width: 600px) {
   .strategy-grid { grid-template-columns: 1fr; }
   .agent-grid { grid-template-columns: 1fr; }
   .trade-grid { grid-template-columns: repeat(2, 1fr); }
+  .modal-box { max-width: 100%; }
 }

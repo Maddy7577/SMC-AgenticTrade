@@ -71,6 +71,93 @@
 </section>
 {% endif %}
 
+<!-- Phase 2: Strategy-specific evidence panels (FR-UI2-05) -->
+{% if signal.strategy_id == '07_ote_fvg' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>OTE + FVG Evidence</h2>
+  <dl class="evidence-dl">
+    <dt>Fib 0.618</dt><dd class="mono">{{ "%.5f"|format(ev.fib_levels['0.618']) if ev.fib_levels and '0.618' in ev.fib_levels else '—' }}</dd>
+    <dt>Fib 0.705 (Entry)</dt><dd class="mono">{{ "%.5f"|format(ev.entry_705) if ev.entry_705 else '—' }}</dd>
+    <dt>Fib 0.786</dt><dd class="mono">{{ "%.5f"|format(ev.fib_levels['0.786']) if ev.fib_levels and '0.786' in ev.fib_levels else '—' }}</dd>
+    <dt>OTE Zone</dt><dd class="mono">{{ "%.5f"|format(ev.ote_low) if ev.ote_low else '—' }} – {{ "%.5f"|format(ev.ote_high) if ev.ote_high else '—' }}</dd>
+    <dt>FVG Overlap</dt><dd class="mono">{{ ev.overlap_pips|default('—') }} pips</dd>
+  </dl>
+</section>
+{% endif %}
+
+{% if signal.strategy_id == '08_rejection_block' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>Rejection Block Evidence</h2>
+  <dl class="evidence-dl">
+    {% if ev.wick_info %}
+    <dt>Wick / Body</dt><dd class="mono">{{ ev.wick_info.wick_pips }}p / {{ ev.wick_info.body_pips }}p ({{ ev.wick_info.ratio }}×)</dd>
+    {% endif %}
+    <dt>Fib Retracement</dt><dd class="mono">{{ ev.fib_pct|default('—') }}%  (required: 80–90%)</dd>
+    <dt>50%-Body Rule</dt><dd class="badge badge-{{ 'valid' if ev.body_penetration == 'PASS' else 'no-trade' }}">{{ ev.body_penetration|default('—') }}</dd>
+  </dl>
+</section>
+{% endif %}
+
+{% if signal.strategy_id == '09_mmm' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>Market Maker Model Evidence</h2>
+  <dl class="evidence-dl">
+    <dt>Current Phase</dt><dd class="mono">{{ ev.phase|default('—') }} — {{ ev.phase_name|default('Unknown') }}</dd>
+    {% if ev.consolidation %}
+    <dt>Consolidation Zone</dt><dd class="mono">{{ "%.5f"|format(ev.consolidation.low) }} – {{ "%.5f"|format(ev.consolidation.high) }}</dd>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
+{% if signal.strategy_id == '10_po3' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>Power of 3 / AMD Evidence</h2>
+  <dl class="evidence-dl">
+    <dt>AMD Cycle</dt><dd class="mono">{{ ev.amd_phase|default('Unknown') }}</dd>
+    <dt>Asian Range</dt><dd class="mono">{{ "%.5f"|format(ev.asian_low) if ev.asian_low else '—' }} – {{ "%.5f"|format(ev.asian_high) if ev.asian_high else '—' }}</dd>
+    {% if ev.manipulation %}
+    <dt>Manipulation</dt><dd class="mono">{{ ev.manipulation.direction }} at {{ "%.5f"|format(ev.manipulation.manipulation_extreme) }}</dd>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
+{% if signal.strategy_id == '12_vacuum' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>Vacuum Block Evidence</h2>
+  <dl class="evidence-dl">
+    {% if ev.gap %}
+    <dt>Gap Type</dt><dd class="mono">{{ ev.gap.gap_type|replace('_', ' ')|title }}</dd>
+    <dt>Gap Zone</dt><dd class="mono">{{ "%.5f"|format(ev.gap.bottom) }} – {{ "%.5f"|format(ev.gap.top) }}</dd>
+    <dt>50% CE Level</dt><dd class="mono">{{ "%.5f"|format(ev.gap.ce) }}</dd>
+    <dt>Gap Status</dt><dd class="mono">{{ 'Fully Filled' if ev.gap.filled_pct == 100 else ('%.0f%%'|format(ev.gap.filled_pct) + ' filled') }}</dd>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
+{% if signal.strategy_id == '13_reclaimed_fvg' and signal.payload and signal.payload.evidence %}
+{% set ev = signal.payload.evidence %}
+<section class="card">
+  <h2>Reclaimed FVG Evidence</h2>
+  <dl class="evidence-dl">
+    {% if ev.fvg_zone %}
+    <dt>FVG Zone</dt><dd class="mono">{{ "%.5f"|format(ev.fvg_zone.bottom) }} – {{ "%.5f"|format(ev.fvg_zone.top) }} | CE: {{ "%.5f"|format(ev.fvg_zone.ce) }}</dd>
+    {% endif %}
+    <dt>CE Tests</dt><dd class="mono">{{ ev.ce_test_count|default(0) }} respected (required: ≥2)</dd>
+    {% if ev.tests %}
+    <dt>Last Test</dt><dd class="mono">{{ ev.tests[-1].t }} — {{ 'respected' if ev.tests[-1].respected else 'failed' }}</dd>
+    {% endif %}
+  </dl>
+</section>
+{% endif %}
+
 <!-- 4-agent debate panel -->
 <section class="card">
   <h2>Agent Debate</h2>

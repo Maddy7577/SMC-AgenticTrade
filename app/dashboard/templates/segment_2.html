@@ -15,6 +15,17 @@
   <span id="blackout-badge" class="blackout-badge hidden">🚫 BLACKOUT ACTIVE</span>
 </div>
 
+<!-- Phase 2: responsive 15-card grid (FR-UI2-02) -->
+<style>
+.strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 1399px) { .strategy-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 767px)  { .strategy-grid { grid-template-columns: 1fr; } }
+</style>
+
 <div class="strategy-grid" id="strategy-grid">
   {% for card in cards %}
   <div class="strategy-card" data-strategy="{{ card.strategy_id }}">
@@ -45,6 +56,20 @@
           <span>TP1: <span class="mono copyable" data-val="{{ card.last_signal.tp1 }}">{{ "%.5f"|format(card.last_signal.tp1) }}</span></span>
         </div>
         {% endif %}
+      {% elif card.watching %}
+        <p class="muted small">Watching levels:</p>
+        <div class="levels watching-levels">
+          <span class="direction-{{ card.watching.direction }}">{{ card.watching.direction | upper if card.watching.direction else '—' }}</span>
+          <span>E: <span class="mono">{{ "%.5f"|format(card.watching.entry) }}</span></span>
+          <span>SL: <span class="mono">{{ "%.5f"|format(card.watching.sl) }}</span></span>
+          <span>TP1: <span class="mono">{{ "%.5f"|format(card.watching.tp1) }}</span></span>
+        </div>
+        {% set reasons = card.watching.payload.get('rejection_reasons', []) %}
+        {% if reasons %}
+        <div class="rejection-reasons">
+          {% for r in reasons[:2] %}<span class="reason-tag">{{ r }}</span>{% endfor %}
+        </div>
+        {% endif %}
       {% else %}
         <p class="muted small">Waiting for setup…</p>
       {% endif %}
@@ -66,12 +91,12 @@
   // SSE auto-refresh (FR-UI-03, NFR-P-04)
   const source = new EventSource('/stream/signals');
   source.onmessage = function(e) {
-    // Simple: reload the page on any new signal
     location.reload();
   };
   source.onerror = function() {
-    // Fallback: poll every 15s
     setTimeout(() => location.reload(), 15000);
   };
+  // Periodic refresh every 3 minutes so NO_TRADE dots stay current
+  setInterval(() => location.reload(), 3 * 60 * 1000);
 </script>
 {% endblock %}

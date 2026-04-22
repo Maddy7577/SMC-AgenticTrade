@@ -90,6 +90,15 @@ def get_latest_candle_time(
 # Events
 # ---------------------------------------------------------------------------
 
+def prune_old_events(conn: sqlite3.Connection, days: int = 90) -> int:
+    """Delete events older than `days` days. Returns number of rows deleted."""
+    cur = conn.execute(
+        "DELETE FROM events WHERE t < datetime('now', ? || ' days')",
+        (f"-{days}",),
+    )
+    return cur.rowcount
+
+
 def insert_event(
     conn: sqlite3.Connection,
     t: datetime,
@@ -508,3 +517,55 @@ def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
         "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         (key, value),
     )
+
+
+# ---------------------------------------------------------------------------
+# Strategy overrides (enable/disable + per-strategy confidence threshold)
+# ---------------------------------------------------------------------------
+
+ALL_STRATEGY_META: list[tuple[str, str]] = [
+    ("01_unicorn",       "Unicorn Model"),
+    ("02_judas",         "Judas Swing"),
+    ("03_confirmation",  "Confirmation Model"),
+    ("04_silver_bullet", "Silver Bullet"),
+    ("05_nested_fvg",    "Nested FVG Stack"),
+    ("06_ifvg",          "Inverted FVG"),
+    ("07_ote_fvg",       "OTE + FVG"),
+    ("08_rejection_block", "Rejection Block"),
+    ("09_mmm",           "Market Maker Model"),
+    ("10_po3",           "Power of 3 / AMD"),
+    ("11_propulsion",    "Propulsion Block"),
+    ("12_vacuum",        "Vacuum Block"),
+    ("13_reclaimed_fvg", "Reclaimed FVG"),
+    ("14_cisd",          "CISD"),
+    ("15_bpr_ob",        "BPR in OB"),
+]
+
+
+def get_strategy_overrides(conn: sqlite3.Connection) -> dict[str, dict]:
+    """Return {strategy_id: {enabled: bool, name: str, threshold: float|None}} for all strategies."""
+    result: dict[str, dict] = {}
+    for sid, name in ALL_STRATEGY_META:
+        enabled_val = get_setting(conn, f"strategy_enabled:{sid}", "1")
+        threshold_val = get_setting(conn, f"strategy_conf_threshold:{sid}")
+        threshold: float | None = None
+        if threshold_val:
+            try:
+                threshold = float(threshold_val)
+            except ValueError:
+                pass
+        result[sid] = {"enabled": enabled_val != "0", "name": name, "threshold": threshold}
+    return result
+
+
+def set_strategy_override(
+    conn: sqlite3.Connection,
+    strategy_id: str,
+    enabled: bool,
+    threshold: float | None,
+) -> None:
+    set_setting(conn, f"strategy_enabled:{strategy_id}", "1" if enabled else "0")
+    if threshold is not None:
+        set_setting(conn, f"strategy_conf_threshold:{strategy_id}", str(round(threshold, 1)))
+    else:
+        conn.execute("DELETE FROM settings WHERE key=?", (f"strategy_conf_threshold:{strategy_id}",))

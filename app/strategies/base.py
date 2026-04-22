@@ -82,3 +82,7 @@ class BaseStrategy(ABC):
     def build_signature(self, context) -> str | None:
         """Return canonical cluster signature or None if setup not present."""
         ...
+
+    def build_evidence(self, context) -> dict:
+        """Return strategy-specific evidence dict for dashboard display."""
+        return {}

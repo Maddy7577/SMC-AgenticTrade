@@ -31,12 +31,15 @@ def strategies():
             sigs = get_signals(conn, strategy_id=sid, limit=10)
             published = [s for s in sigs if s["gate_result"] == "published"]
             last_sig = published[0] if published else None
+            # Most recent signal with computed levels (for "watching" display)
+            watching = next((s for s in sigs if s.get("entry") is not None), None)
             # Last 10 verdicts for dot display
             last_10 = sigs[:10]
             cards.append({
                 "strategy_id": sid,
                 "strategy_name": sname,
                 "last_signal": last_sig,
+                "watching": watching,
                 "last_10": last_10,
             })
 

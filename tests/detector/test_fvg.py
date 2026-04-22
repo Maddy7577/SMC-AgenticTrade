@@ -1,10 +1,10 @@
-"""Unit tests for FVG detector (J2)."""
+"""Unit tests for FVG detector (J2), including CE-test history (FR-C2-03)."""
 
 from __future__ import annotations
 
 import pytest
 
-from app.detector.fvg import FVG, detect_fvgs, update_fvg_state
+from app.detector.fvg import FVG, detect_fvgs, update_fvg_ce_tests, update_fvg_state
 from tests.fixtures.scenarios import (
     bearish_fvg_scenario,
     bullish_fvg_scenario,
@@ -142,3 +142,49 @@ def test_fvg_id_format():
     candles = bullish_fvg_scenario()
     fvg = detect_fvgs(candles, instrument="EUR_USD", timeframe="M5")[0]
     assert fvg.id.startswith("EUR_USD_M5_")
+
+
+# ---------------------------------------------------------------------------
+# CE-test history tests (FR-C2-03)
+# ---------------------------------------------------------------------------
+
+def test_ce_test_respected_bullish():
+    fvg = _make_fvg(1.10050, 1.10100, "bullish")
+    # Candle enters gap but closes above CE (respected)
+    candle = {"o": 1.10120, "h": 1.10130, "l": 1.10060, "c": 1.10090, "t": "2026-01-01T10:03:00"}
+    result = update_fvg_ce_tests([fvg], candle)
+    assert len(result[0].tests) == 1
+    assert result[0].tests[0]["respected"] is True
+
+
+def test_ce_test_failed_bullish():
+    fvg = _make_fvg(1.10050, 1.10100, "bullish")
+    # Close below CE (midpoint = 1.10075) = failed
+    candle = {"o": 1.10090, "h": 1.10100, "l": 1.10050, "c": 1.10060, "t": "2026-01-01T10:03:00"}
+    result = update_fvg_ce_tests([fvg], candle)
+    assert len(result[0].tests) == 1
+    assert result[0].tests[0]["respected"] is False
+
+
+def test_ce_test_not_recorded_outside_zone():
+    fvg = _make_fvg(1.10050, 1.10100, "bullish")
+    # Candle doesn't touch the FVG zone at all
+    candle = {"o": 1.11000, "h": 1.11100, "l": 1.10900, "c": 1.11000, "t": "2026-01-01T10:03:00"}
+    result = update_fvg_ce_tests([fvg], candle)
+    assert len(result[0].tests) == 0
+
+
+def test_ce_test_not_recorded_for_fully_filled():
+    fvg = _make_fvg(1.10050, 1.10100, "bullish")
+    fvg.state = "fully_filled"
+    candle = {"o": 1.10070, "h": 1.10090, "l": 1.10060, "c": 1.10075, "t": "2026-01-01T10:03:00"}
+    result = update_fvg_ce_tests([fvg], candle)
+    assert len(result[0].tests) == 0
+
+
+def test_multiple_ce_tests_accumulate():
+    fvg = _make_fvg(1.10050, 1.10100, "bullish")
+    for i in range(3):
+        candle = {"o": 1.10120, "h": 1.10130, "l": 1.10060, "c": 1.10085, "t": f"2026-01-01T10:0{i}:00"}
+        update_fvg_ce_tests([fvg], candle)
+    assert len(fvg.tests) == 3

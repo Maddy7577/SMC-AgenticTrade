@@ -57,3 +57,10 @@ class CanonicalContext:
     # Live price at context build time
     current_price: float | None = None
     current_spread_pips: float | None = None
+
+    # Phase 2 CED extensions (FR-C2-09)
+    fib_levels: dict[float, float] = field(default_factory=dict)
+    active_gaps: list[dict] = field(default_factory=list)
+    amd_phase: str = "Unknown"
+    mmm_phase: int = 0
+    fvg_test_history: dict[str, list[dict]] = field(default_factory=dict)

@@ -55,6 +55,22 @@ def publish_signal(
     from app.dashboard.routes.sse import push_signal_event
     push_signal_event(signal_id, signal["verdict"], signal["strategy_id"])
 
+    # Telegram alert
+    from app.notifications.telegram import send_signal_alert
+    from app.storage.repositories import ALL_STRATEGY_META
+    _meta_map = dict(ALL_STRATEGY_META)
+    strategy_name = _meta_map.get(signal["strategy_id"], signal["strategy_id"])
+    send_signal_alert(
+        verdict=signal["verdict"],
+        strategy_name=strategy_name,
+        direction=signal.get("direction"),
+        entry=signal.get("entry"),
+        sl=signal.get("sl"),
+        tp1=signal.get("tp1"),
+        rr=signal.get("rr"),
+        confidence=signal.get("confidence"),
+    )
+
     return trade_id
 
 

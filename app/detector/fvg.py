@@ -7,11 +7,14 @@ Bearish FVG: C1.low > C3.high  (gap below C1, above C3)
 State machine (FR-C-03):
   formed → retested (price enters gap) → partially_filled / fully_filled / inverted
   inverted = candle BODY closes through the entire FVG (used by Strategy #6)
+
+CE-test history (FR-C2-03): each time price enters the zone, record whether the candle
+  closed beyond the CE (failed) or respected it (held).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from config.instruments import pips_to_price
@@ -35,6 +38,7 @@ class FVG:
     direction: FVGDirection
     state: FVGState = "formed"
     size_pips: float = 0.0
+    tests: list[dict] = field(default_factory=list)  # CE-test history (FR-C2-03)
 
     @property
     def ce(self) -> float:
@@ -127,3 +131,35 @@ def update_fvg_state(fvg: FVG, candle: dict) -> FVG:
             elif fvg.state == "retested":
                 fvg.state = "partially_filled"
     return fvg
+
+
+def update_fvg_ce_tests(fvgs: list[FVG], new_candle: dict) -> list[FVG]:
+    """Record CE-test history for each active FVG (FR-C2-03).
+
+    A test is recorded when price enters the gap zone.
+    respected=True if candle closes back inside zone (did NOT close beyond CE).
+    Bullish failure: close < CE (closed below midpoint — bearish escape).
+    Bearish failure: close > CE (closed above midpoint — bullish escape).
+    """
+    for fvg in fvgs:
+        if fvg.state in ("fully_filled", "inverted"):
+            continue
+        c_high, c_low = new_candle["h"], new_candle["l"]
+        c_close = new_candle["c"]
+        candle_t = str(new_candle["t"])
+        # Candle entered the gap zone
+        if fvg.direction == "bullish" and c_low <= fvg.top and c_high >= fvg.bottom:
+            respected = c_close >= fvg.ce
+            fvg.tests.append({
+                "t": candle_t,
+                "respected": respected,
+                "close_price": c_close,
+            })
+        elif fvg.direction == "bearish" and c_high >= fvg.bottom and c_low <= fvg.top:
+            respected = c_close <= fvg.ce
+            fvg.tests.append({
+                "t": candle_t,
+                "respected": respected,
+                "close_price": c_close,
+            })
+    return fvgs
